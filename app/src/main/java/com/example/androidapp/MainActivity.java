@@ -3,6 +3,7 @@ package com.example.androidapp;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -24,9 +25,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         SignalText = (TextView)findViewById(R.id.SignalText);
-        SignalText.setText(0);
+        SignalText.setText("0");
         BitErrorText = (TextView)findViewById(R.id.BitErrorText);
-        BitErrorText.setText(0);
+        BitErrorText.setText("0");
+
         NewKeyButton = (Button)findViewById(R.id.NewKeyButton);
         Thread myThread = new Thread(new MyReadThread());
         myThread.start();
@@ -46,7 +48,8 @@ public class MainActivity extends AppCompatActivity {
         InputStreamReader isr;
         BufferedReader br;
         Handler h = new Handler();
-        String mes;
+        String mes, code, value;
+
 
         @Override
         public void run() {
@@ -55,35 +58,24 @@ public class MainActivity extends AppCompatActivity {
                 isr = new InputStreamReader(s.getInputStream());
                 br = new BufferedReader(isr);
                 while(true){
-                    mes = br.readLine();
+                    mes = br.readLine().trim();
+                    Log.i("MAIN",mes);
 
-                    String code = mes.substring(0,8);
-                    final String value = mes.substring(8);
-                    switch(code){
-                        case "00000001" :
-                            h.post(new Runnable() {
-                                @Override
-                                public void run() {
+                    if(mes.length() >= 8) {
+                        h.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                code = mes.substring(0, 8).trim();
+                                value = mes.substring(8).trim();
+                                if(code.equals("00000001")){
                                     SignalText.setText(value);
-                                }
-                            });
-                            break;
-                        case "00000010" :
-                            h.post(new Runnable() {
-                                @Override
-                                public void run() {
+                                } else if(code.equals("00000010")){
                                     BitErrorText.setText(value);
+                                } else if(code.equals("00000011")){
+                                    Toast.makeText(getApplicationContext(), "Encryption Key Changed", Toast.LENGTH_SHORT).show();
                                 }
-                            });
-                            break;
-                        case "00000011" :
-                            h.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(getApplicationContext(), "Encryptio Key Changed", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                            break;
+                            }
+                        });
 
                     }
                 }
