@@ -30,11 +30,16 @@ public class MainActivity extends AppCompatActivity {
         BitErrorText.setText("0");
 
         NewKeyButton = (Button)findViewById(R.id.NewKeyButton);
-        Thread myThread = new Thread(new MyReadThread());
+
+        // Første tråd til det ene board
+        Thread myThread = new Thread(new MyReadThread("192.168.0.11",8080));
         myThread.start();
 
-        NewKeyButton.setOnClickListener(new View.OnClickListener(){
+        // Anden tråd til det andet board. Brug ny port.
+        Thread mySecondThread = new Thread(new MyReadThread("192.168.0.11",8181));
+        mySecondThread.start();
 
+        NewKeyButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
                 requestNewKey(v);
@@ -49,17 +54,22 @@ public class MainActivity extends AppCompatActivity {
         BufferedReader br;
         Handler h = new Handler();
         String mes, code, value;
-
+        String IP;
+        int PORT;
+        public MyReadThread(String IP, int PORT){
+            this.IP = IP;
+            this.PORT = PORT;
+        }
 
         @Override
         public void run() {
             try {
-                s = new Socket("192.168.0.11",8080);
+                s = new Socket(IP,PORT);
                 isr = new InputStreamReader(s.getInputStream());
                 br = new BufferedReader(isr);
                 while(true){
                     mes = br.readLine().trim();
-                    Log.i("MAIN",mes);
+                    //Log.i("MAIN",mes);
 
                     if(mes.length() >= 8) {
                         h.post(new Runnable() {
