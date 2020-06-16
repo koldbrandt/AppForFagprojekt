@@ -5,18 +5,20 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class MessageSender extends AsyncTask<String, Void, Void> {
+public class MessageSender extends AsyncTask<String, String, String> {
 
     Socket s;
     PrintWriter pw;
 
     @Override
-    protected Void doInBackground(String... params) {
+    protected String doInBackground(String... params) {
 
         String message = params[0];
+        String IP = params[1];
+        String port = params[2];
 
         try {
-            s = new Socket("192.168.0.11",8080);
+            s = new Socket(IP,Integer.parseInt(port));
             pw = new PrintWriter(s.getOutputStream());
             pw.write(message);
             pw.flush();

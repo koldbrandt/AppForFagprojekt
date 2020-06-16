@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,9 +16,12 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity {
-    Button NewKeyButton;
-    TextView SignalText;
-    TextView BitErrorText;
+    Button NewKeyButton, ConnectButton;
+    TextView SignalText, BitErrorText;
+    EditText TransIP, RecvIP, TransPort, RecvPort;
+    boolean checkConnect = false;
+    String ip1, ip2;
+    String port1, port2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,20 +33,47 @@ public class MainActivity extends AppCompatActivity {
         BitErrorText = (TextView)findViewById(R.id.BitErrorText);
         BitErrorText.setText("0");
 
+        TransIP = (EditText)findViewById(R.id.IPText);
+        RecvIP = (EditText)findViewById(R.id.IPText2);
+
+        TransPort = (EditText)findViewById(R.id.TransPort);
+        RecvPort = (EditText)findViewById(R.id.RecvPort);
+
+        ConnectButton = (Button)findViewById(R.id.ConnectButton);
         NewKeyButton = (Button)findViewById(R.id.NewKeyButton);
 
         // Første tråd til det ene board
-        Thread myThread = new Thread(new MyReadThread("192.168.0.11",8080));
-        myThread.start();
+        ip1 = TransIP.getText().toString();
+        port1 = TransPort.getText().toString();
+        final Thread myThread = new Thread(new MyReadThread(ip1,Integer.parseInt(port1)));
 
         // Anden tråd til det andet board. Brug ny port.
-        Thread mySecondThread = new Thread(new MyReadThread("192.168.0.11",8181));
-        mySecondThread.start();
+        ip2 = RecvIP.getText().toString();
+        port2 =RecvPort.getText().toString();
+        final Thread mySecondThread = new Thread(new MyReadThread(ip2,Integer.parseInt(port2)));
 
         NewKeyButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
-                requestNewKey(v);
+                if(checkConnect) {
+                    requestNewKey(v);
+                } else {
+                    Toast.makeText(getApplicationContext(), "Not connected yet",Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        ConnectButton.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v){
+                if(!checkConnect) {
+                    myThread.start();
+                    mySecondThread.start();
+
+                    checkConnect = true;
+                } else {
+                    Toast.makeText(getApplicationContext(), "Already Connected",Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
@@ -98,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void requestNewKey(View v){
         MessageSender ms = new MessageSender();
-        ms.execute("WeWouldLikeANewKeySirPleaseAndThankYou");
+        ms.execute("WeWouldLikeANewKeySirPleaseAndThankYou", ip2, port2);
     }
 }
 
