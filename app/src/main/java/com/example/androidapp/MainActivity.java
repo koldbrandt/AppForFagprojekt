@@ -14,6 +14,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     Button NewKeyButton, ConnectButton;
@@ -42,16 +44,6 @@ public class MainActivity extends AppCompatActivity {
         ConnectButton = (Button)findViewById(R.id.ConnectButton);
         NewKeyButton = (Button)findViewById(R.id.NewKeyButton);
 
-        // Første tråd til det ene board
-        ip1 = TransIP.getText().toString();
-        port1 = TransPort.getText().toString();
-        final Thread myThread = new Thread(new MyReadThread(ip1,Integer.parseInt(port1)));
-
-        // Anden tråd til det andet board. Brug ny port.
-        ip2 = RecvIP.getText().toString();
-        port2 =RecvPort.getText().toString();
-        final Thread mySecondThread = new Thread(new MyReadThread(ip2,Integer.parseInt(port2)));
-
         NewKeyButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
@@ -66,16 +58,57 @@ public class MainActivity extends AppCompatActivity {
         ConnectButton.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
-                if(!checkConnect) {
+                //Get text from the port and IP fields.
+                // Første tråd til det ene board
+                ip1 = TransIP.getText().toString();
+                port1 = TransPort.getText().toString();
+                final Thread myThread = new Thread(new MyReadThread(ip1,Integer.parseInt(port1)));
+
+                // Anden tråd til det andet board.
+                ip2 = RecvIP.getText().toString();
+                port2 =RecvPort.getText().toString();
+                final Thread mySecondThread = new Thread(new MyReadThread(ip2,Integer.parseInt(port2)));
+
+                // Check if IP is of the correct format
+                if(!(isValidIPAddress(ip1) && isValidIPAddress(ip2))){
+                    Toast.makeText(getApplicationContext(), "Incorrect IP format",Toast.LENGTH_SHORT).show();
+                    // If we haven't connected yet, we can connect.
+                } else if(!checkConnect) {
                     myThread.start();
                     mySecondThread.start();
 
                     checkConnect = true;
                 } else {
+                    // Already connected
                     Toast.makeText(getApplicationContext(), "Already Connected",Toast.LENGTH_SHORT).show();
                 }
             }
         });
+    }
+
+    // Function to validate the IPs address.
+    public static boolean isValidIPAddress(String ip) {
+        // Regex for digit from 0 to 255.
+        String zeroTo255
+                = "(\\d{1,2}|(0|1)\\"
+                + "d{2}|2[0-4]\\d|25[0-5])";
+
+        String regex
+                = zeroTo255 + "\\."
+                + zeroTo255 + "\\."
+                + zeroTo255 + "\\."
+                + zeroTo255;
+
+        Pattern p = Pattern.compile(regex);
+
+        if (ip == null) {
+            return false;
+        }
+        Matcher m = p.matcher(ip);
+
+        // Return if the IP address
+        // matched the ReGex
+        return m.matches();
     }
 
     class MyReadThread implements Runnable
