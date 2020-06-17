@@ -17,6 +17,12 @@ import java.net.Socket;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// BUG LIST
+// - Can "connect" to a valid ip without connecting, leaving it in a stuck state.
+// - App cannot crash
+// - Need regex to check ports
+// - Determine on exit function
+
 public class MainActivity extends AppCompatActivity {
     Button NewKeyButton, ConnectButton;
     TextView SignalText, BitErrorText;
@@ -24,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     boolean checkConnect = false;
     String ip1, ip2;
     String port1, port2;
+    MyReadThread Thread1;
+    MyReadThread Thread2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v){
                 if(checkConnect) {
-                    requestNewKey(v);
+                    sendMessage("NewKeyPlease", ip2, port2);
                 } else {
                     Toast.makeText(getApplicationContext(), "Not connected yet",Toast.LENGTH_SHORT).show();
                 }
@@ -62,12 +70,14 @@ public class MainActivity extends AppCompatActivity {
                 // Første tråd til det ene board
                 ip1 = TransIP.getText().toString();
                 port1 = TransPort.getText().toString();
-                final Thread myThread = new Thread(new MyReadThread(ip1,Integer.parseInt(port1)));
+                Thread1 = new MyReadThread(ip1,Integer.parseInt(port1));
+                Thread myThread = new Thread(Thread1);
 
                 // Anden tråd til det andet board.
                 ip2 = RecvIP.getText().toString();
                 port2 =RecvPort.getText().toString();
-                final Thread mySecondThread = new Thread(new MyReadThread(ip2,Integer.parseInt(port2)));
+                Thread2 = new MyReadThread(ip2,Integer.parseInt(port2));
+                Thread mySecondThread = new Thread(Thread2);
 
                 // Check if IP is of the correct format
                 if(!(isValidIPAddress(ip1) && isValidIPAddress(ip2))){
@@ -84,6 +94,38 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        endConnection();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        endConnection();
+    }
+
+    @Override
+    public void finish() {
+        super.finish();
+        endConnection();
+    }
+
+    public void endConnection(){
+        if(checkConnect) {
+            sendMessage("EXIT", ip1, port1);
+            sendMessage("EXIT", ip2, port2);
+            try {
+                Thread1.closeConn();
+                Thread2.closeConn();
+                checkConnect = false;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     // Function to validate the IPs address.
@@ -106,8 +148,6 @@ public class MainActivity extends AppCompatActivity {
         }
         Matcher m = p.matcher(ip);
 
-        // Return if the IP address
-        // matched the ReGex
         return m.matches();
     }
 
@@ -131,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
                 s = new Socket(IP,PORT);
                 isr = new InputStreamReader(s.getInputStream());
                 br = new BufferedReader(isr);
-                while(true){
+                while(checkConnect){
                     mes = br.readLine().trim();
                     //Log.i("MAIN",mes);
 
@@ -157,12 +197,18 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+
+        public void closeConn() throws IOException {
+            br.close();
+            isr.close();
+            s.close();
+        }
     }
 
 
-    public void requestNewKey(View v){
+    public void sendMessage(String message, String IP, String PORT){
         MessageSender ms = new MessageSender();
-        ms.execute("WeWouldLikeANewKeySirPleaseAndThankYou", ip2, port2);
+        ms.execute(message, IP, PORT);
     }
 }
 
