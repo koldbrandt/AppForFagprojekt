@@ -19,9 +19,7 @@ import java.util.regex.Pattern;
 
 // BUG LIST
 // - Can "connect" to a valid ip without connecting, leaving it in a stuck state.
-// - App cannot crash
-// - Need regex to check ports
-// - Determine on exit function
+
 
 public class MainActivity extends AppCompatActivity {
     Button NewKeyButton, ConnectButton;
@@ -67,23 +65,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v){
                 //Get text from the port and IP fields.
-                // Første tråd til det ene board
                 ip1 = TransIP.getText().toString();
                 port1 = TransPort.getText().toString();
-                Thread1 = new MyReadThread(ip1,Integer.parseInt(port1));
-                Thread myThread = new Thread(Thread1);
 
-                // Anden tråd til det andet board.
                 ip2 = RecvIP.getText().toString();
                 port2 =RecvPort.getText().toString();
-                Thread2 = new MyReadThread(ip2,Integer.parseInt(port2));
-                Thread mySecondThread = new Thread(Thread2);
-
-                // Check if IP is of the correct format
-                if(!(isValidIPAddress(ip1) && isValidIPAddress(ip2))){
+                if(!(isValidPort(port1) && isValidPort(port2))){ // Check if port is of the correct format
+                    // Show toast widget if not
+                    Toast.makeText(getApplicationContext(), "Incorrect port format",Toast.LENGTH_SHORT).show();
+                } else if(!(isValidIPAddress(ip1) && isValidIPAddress(ip2))){ // Check if IP is of the correct format
+                    // Show Toast widget if not
                     Toast.makeText(getApplicationContext(), "Incorrect IP format",Toast.LENGTH_SHORT).show();
-                    // If we haven't connected yet, we can connect.
-                } else if(!checkConnect) {
+                } else if(!checkConnect) { // If we haven't connected yet, we can connect.
+                    // Første tråd til det ene board
+                    Thread1 = new MyReadThread(ip1,Integer.parseInt(port1));
+                    Thread myThread = new Thread(Thread1);
+
+                    // Anden tråd til det andet board.
+                    Thread2 = new MyReadThread(ip2,Integer.parseInt(port2));
+                    Thread mySecondThread = new Thread(Thread2);
+
                     myThread.start();
                     mySecondThread.start();
 
@@ -114,6 +115,12 @@ public class MainActivity extends AppCompatActivity {
         endConnection();
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        endConnection();
+    }
+
     public void endConnection(){
         if(checkConnect) {
             sendMessage("EXIT", ip1, port1);
@@ -126,6 +133,21 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+
+    //Function to validate the PORT
+    public static boolean isValidPort(String port){
+        int x = 0;
+        try {
+            x = Integer.parseInt(port);
+        } catch (NumberFormatException e){
+            return false;
+        }
+
+        if(x <= 0 || x > 65535){
+            return false;
+        }
+        return true;
     }
 
     // Function to validate the IPs address.
@@ -151,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
         return m.matches();
     }
 
+    // Thread to receive parameters to read
     class MyReadThread implements Runnable
     {
         Socket s;
@@ -205,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
+    //Send messeage function, uses seperate thread in MessageSender
     public void sendMessage(String message, String IP, String PORT){
         MessageSender ms = new MessageSender();
         ms.execute(message, IP, PORT);
